@@ -1,0 +1,70 @@
+---
+title: "607_hw1_weizhou"
+author: "Wei Zhou"
+date: "2/2/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(readr) # CSV file I/O, e.g. the read_csv function
+library(dplyr)
+library(plyr)
+
+```
+####Load data
+```{r}
+mr<- read.csv("./mushrooms.csv")
+```
+#### Revalue data
+```{r}
+sub_names <- c("class","cap.shape","cap.surface","cap.color","bruises")
+mr_sub <- mr[sub_names]
+
+mr_sub <- mr_sub %>%
+          mutate(class = recode(class,'e'='edible',
+                                      'p'='poisonous'))%>%
+          mutate(cap.shape = recode(cap.shape,
+                                    'b'='bell',
+                                    'c'='conical',
+                                    'x'='convex',
+                                    'f'= 'flat',
+                                    'k'= 'knobbed',
+                                    's'= 'sunken')) %>%
+          mutate(cap.surface = recode(cap.surface,
+                                    'f'='fibrous',
+                                    'g'='grooves',
+                                    'y'='scaly',
+                                    's'='smooth'))%>%
+          mutate(cap.color = recode(cap.color,
+                                    'n'='brown',
+                                    'b'='buff',
+                                    'b'='cinnamon',
+                                    'g'='gray',
+                                    'r'='green',
+                                    'p'='pink',
+                                    'u'='purple',
+                                    'e'='red',
+                                    'w'='white',
+                                    'y'='yellow'))%>%
+          mutate(bruises = recode(bruises,
+                                  't'='bruises',
+                                  'f'='no'))
+            
+
+```
+
+####Rename columns
+```{r}
+colnames(mr_sub) <- c('mushroom_class'
+                      ,'mushroom_cap_shape'
+                      ,'mushroom_cap_surface'
+                      ,'mushroom_cap_color'
+                      ,'mushroom_bruises')
+```
+####Summary
+```{r}
+summary(mr_sub)
+```
+
+
+

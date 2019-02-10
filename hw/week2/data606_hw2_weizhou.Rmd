@@ -1,0 +1,110 @@
+---
+title: "data607_hw2_weizhou"
+author: "Wei Zhou"
+date: "February 10, 2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+###SQLScript to import CSV file into Mysql Database
+-- loadflights.sql
+
+DROP TABLE IF EXISTS movie;
+DROP TABLE IF EXISTS friend;
+DROP TABLE IF EXISTS rating;
+
+
+CREATE TABLE movie (
+  movie varchar(30)  NOT NULL,
+  mid varchar(2) PRIMARY KEY
+  );
+  
+LOAD DATA INFILE 'C:/ProgramData/MySQL/MySQL Server 8.0/Uploads/movie.csv' 
+INTO TABLE movie 
+FIELDS TERMINATED BY ',' 
+ENCLOSED BY '"'
+LINES TERMINATED BY '\r\n'
+IGNORE 1 ROWS;
+
+CREATE TABLE friend (
+  friend char(2),
+  fid varchar(2)
+  );
+  
+LOAD DATA INFILE 'C:/ProgramData/MySQL/MySQL Server 8.0/Uploads/friend.csv' 
+INTO TABLE friend
+FIELDS TERMINATED BY ',' 
+ENCLOSED BY '"'
+LINES TERMINATED BY '\r\n'
+IGNORE 1 ROWS;
+
+CREATE TABLE rating (
+mid varchar(2),
+fid varchar(2),
+rating integer
+);
+
+LOAD DATA INFILE 'C:/ProgramData/MySQL/MySQL Server 8.0/Uploads/rating.csv' 
+INTO TABLE rating
+FIELDS TERMINATED BY ',' 
+ENCLOSED BY '"'
+LINES TERMINATED BY '\r\n'
+IGNORE 1 ROWS;
+
+
+SET SQL_SAFE_UPDATES = 0;
+
+SELECT 'movie', COUNT(*) FROM movie
+  UNION
+SELECT 'friend', COUNT(*) FROM friend
+  UNION
+SELECT 'rating', COUNT(*) FROM rating ; 
+
+
+```{r echo=FALSE, results='hide',message=FALSE}
+library(RMySQL)
+library(dplyr)
+library(ggplot2)
+library(keyring)
+```
+
+### Establish Connection with MySQL Server
+```{r}
+keyring::key_set(service = "mysql", 
+                 username = "root")
+
+con <- dbConnect(MySQL(),    user='root', password=keyring::key_get("mysql","root"),   dbname='movies', host='localhost')
+```
+###Obtain data 
+```{r}
+rating <- dbSendQuery(con, "SELECT m.movie,f.friend,r.rating
+                            FROM rating r 
+                            left outer join movie m on m.mid = r.mid 
+                            left outer join friend f on f.fid = r.fid
+                            ")
+rating_df=dbFetch(rating)
+```
+
+### Movie Names
+```{r}
+print(unique(rating_df$movie))
+```
+### Friend Names
+```{r}
+print(unique(rating_df$friend))
+```
+###Avg Rating / Movie
+```{r}
+movie_rating=rating_df%>%
+  group_by(movie)%>%
+  summarise(avg_rating = mean(rating))
+
+ggplot(movie_rating, aes(y=avg_rating,x=movie))+geom_bar(stat = "identity")+theme(axis.text.x=element_text(angle=90, hjust=1))
+  
+```
+
+
+
