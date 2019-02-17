@@ -1,0 +1,99 @@
+---
+title: "data607_hw3_weizhou"
+author: "Wei Zhou"
+date: "2/16/2019"
+output:
+  html_document:
+    theme: cerulean
+    highlight: pygments
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(stringr)
+```
+
+### Create data
+```{r cars}
+raw.data <-"555-1239Moe Szyslak(636) 555-0113Burns, C. Montgomery555-6542Rev. Timothy Lovejoy555 8904Ned Flanders636-555-3226Simpson, Homer5553642Dr. Julius Hibbert"
+```
+
+## 1. Conform to standard first_name last_name
+### Extract full name
+```{r}
+name <- unlist(str_extract_all(raw.data, "[[:alpha:]., ]{2,}"))
+name
+```
+
+### Remove Middle Name and title.
+```{r}
+name_1 = str_replace(name, "[A-z]{1,3}\\. ", "")
+name_1
+```
+
+### Switch first last name position if there is comma in name. and remove comma
+```{r}
+name_2=str_replace(name_1,"(\\w+),\\s(\\w+)","\\2 \\1")
+name_2
+```
+###Extract First name and last name
+```{r}
+first_last_name = data.frame(t(sapply(strsplit(name_2," "),head,2)))
+names(first_last_name) = c('first','last')
+first_last_name
+```
+##2. CWhether a character has a title
+```{r}
+name
+title  =str_detect(name,"^[A-z]{1,3}\\. ") ### 1 to 3 alphabet positioning at the start of a string followed by '. '.
+cbind(name,title)
+```
+
+
+## 3.whether a character has a second name 
+```{r}
+sec_name = str_detect(name,"\\s[A-z]\\. ") ### ' ' +second_name +'. '
+cbind(name,sec_name)
+```
+
+## 4. Describe the types of string that conform to the folloing regular expressions and construct an example that is matched by he regular expression
+
+#### 4.1  [0-9]+\\$ : one or more digit + $ sign
+```{r}
+regexp_4_1 = '[0-9]+\\$'
+test_4_1 = 'abs1111$0110100101 '
+str_extract_all(test_4_1,regexp_4_1)
+```
+#### 4.2 \\b[a-z]{1,4}\\b:  word edge + lower case any alphabet from a to z (frequencing from 1 time to 4 times) + word edge
+```{r}
+regexp_4_2 = "\\b[a-z]{1,4}\\b"
+test_4_2 = 'cadfc abw'
+str_extract_all(test_4_2,regexp_4_2)
+```
+
+#### 4.3 .*?\.txt$ :  . means any character   * means zero or more time  ? once or more times '\'   \. a period + txt at the end of the string
+```{r}
+regexp_4_3 = ".*?\\.txt$"
+test_4_3 = '.\test.txt'
+str_extract_all(test_4_3,regexp_4_3)
+```
+
+#### 4.4 \\d{2}/\\d{2}/\\d{4} : 2 digits / 2 digits / 4 digits
+```{r}
+regexp_4_4 = "\\d{2}/\\d{2}/\\d{4}"
+test_4_4 = '11/11/1111'
+str_extract_all(test_4_4,regexp_4_4)
+```
+
+#### 4.5 <(.+?)>.+?</\1>  
+
+```{r}
+print('<any character> any character </contents of group 1>')
+regexp_4_5 = "<(.+?)>.+?</\\1>"
+test_4_5 = '<span>20 flips come up heads</span>'
+str_extract_all(test_4_5,regexp_4_5)
+```
+
+
+
+
