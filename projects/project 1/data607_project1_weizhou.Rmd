@@ -1,0 +1,91 @@
+---
+title: "data607_project1_weizhou"
+author: "Wei Zhou"
+date: "2/23/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(stringr)
+library(knitr)
+library(ggplot2)
+library(dplyr)
+```
+## Read txt file
+```{r}
+chess = readLines('chess.txt',warn=FALSE)
+head(chess,10)
+```
+
+## remove all dash and header 
+```{r}
+chess = subset(chess,str_detect(chess, '[[:alpha:]]')) ## Keep rows with any alphabetic
+chess_rm_header = chess[-c(1:2)]
+head(chess_rm_header,10)
+```
+
+## Separate even index row and odd index row
+```{r}
+index = c(1:length(chess_rm_header))
+even = subset(chess_rm_header,index%%2==0)
+odd = subset(chess_rm_header,index%%2==1)
+head(even,10)
+head(odd,10)
+```
+
+## Convert string into dataframe
+```{r}
+even_df <- read.csv(sep = '|', header = F, text = even, stringsAsFactors = F)
+odd_df <- read.csv(sep = '|', header = F, text = odd, stringsAsFactors = F)
+
+head(even_df,10)
+head(odd_df,10)
+## The shape of even_df and odd_df are the same. We can then merge these 2 dataframe based on index
+```
+
+##Extract pre tournament rating, state and create pre tournament rating table
+```{r}
+pre_rate_str=unlist(str_extract_all(even_df$V2,'[[:punct:]]\\s*[0-9]{3,4}'))
+pre_rate=as.numeric(gsub("[[:punct:][:space:]]", "", pre_rate_str))
+state = even_df$V1%>%str_trim(side = "both")
+ucsf_id= c(1:length(pre_rate))
+rate_df = data.frame(ucsf_id,state,pre_rate)
+head(rate_df)
+```
+
+## Extract all players' name, total number of point and opponents' ucsf ID
+```{r}
+name = odd_df$V2%>%str_trim(side = "both")
+total_number_point = odd_df$V3 %>% str_trim(side = "both")%>%type.convert
+```
+
+##Calculate average pre chess rating of opponents
+```{r}
+avg_rating <- vector(mode = "double", length = length(ucsf_id))
+for (id in ucsf_id){
+  avg_rating[id] = rate_df$pre_rate[odd_df[id,c(4:10)]%>%
+                                    str_sub(2, -1) %>% 
+                                    str_trim(side = "both")%>%
+                                    type.convert]%>%
+                                    na.omit()%>%
+                                    mean()%>%
+                                    round()
+    
+}
+
+avg_rating
+```
+
+## Combine to final dataframe
+```{r}
+final_df = data.frame(name,state,total_number_point,pre_rate,avg_rating)
+
+final_df
+```
+
+## Write to CSV
+```{r}
+write.csv(final_df, file = 'chess.csv')
+```
+
