@@ -1,6 +1,6 @@
 ---
 title: "data607_project1_weizhou"
-author: "Wei Zhou"
+author: "Wei Zhou"出；clacla
 date: "2/23/2019"
 output: html_document
 ---

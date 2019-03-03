@@ -1,0 +1,83 @@
+---
+title: "Data607_hw5_weizhou"
+author: "Wei Zhou"
+date: "3/2/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(stringr)
+library(tidyr)
+library(dplyr)
+```
+#Read Data
+```{r}
+raw <- read.csv('./data.csv')
+raw
+```
+#Data Transformation
+
+### Remove empty line
+```{r}
+raw <-raw[-c(3),]
+names(raw) = c('Airline','Arrival',"Los.Angeles","Phoenix","San.Diego","San.Francisco","Seattle")
+raw
+```
+
+### Fill empty cell
+```{r}
+raw[2,'Airline'] = 'ALASKA'
+raw[4,'Airline'] = 'AM WEST'
+raw 
+```
+
+###Spead Arrival Status
+```{r}
+df <- gather(raw, City, Number, 3:7, factor_key = TRUE)%>%
+       spread(Arrival,'Number')
+head(df,10)
+```
+
+### Calculate delay / on time percentage
+```{r}
+df = df%>%
+  mutate(total_number = delayed + `on time`
+        , ontime_perc = `on time` / total_number
+         ,delayed_perc = delayed / total_number)
+df
+```
+
+#Analysis
+###Compare airline overall delay percentage
+```{r}
+library(ggplot2)
+ggplot(df, aes(x = Airline, y=delayed_perc, fill = City)) +
+    geom_bar(stat="identity",position="dodge") + 
+    xlab("Airlines") + ylab("Delays_percentage") 
+```
+
+```{r}
+df%>%
+  group_by(City,Airline)%>%
+  summarise(delay_rate=sum(delayed)/sum(total_number))%>%
+  spread(Airline, delay_rate)%>%
+  mutate(delay_rate_diff = `AM WEST` - ALASKA)
+```
+
+According to this bar chart, we can conclude that the delay rate of AM WEST in these 5 cities are higher than ALASKA. 
+
+
+###Calculate Average delay rate
+```{r}
+df%>%
+  group_by(Airline)%>%
+  summarize(avg_delay_rate = sum(delayed)/sum(total_number))%>%
+  spread(Airline, avg_delay_rate)%>%
+  mutate(Avg_delay_diff=`AM WEST` - ALASKA)
+
+```
+However, when comparing the the average delay rate, AM West is 2.4% lower than Alaska (13.3% v.s. 10.9%). This is because AM West's majority business is in Phoenix and it is maintaining relatively low delay rate.
+
+
+
