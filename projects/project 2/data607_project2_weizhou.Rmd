@@ -1,0 +1,136 @@
+---
+title: "Data607_project2_weizhou"
+author: "Wei Zhou"
+date: "3/10/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+```
+
+
+### Read data from csv file , skip the first 15 rows
+```{r}
+steel <- read.csv('steel_import_1.csv',skip=15, stringsAsFactors = F, header= FALSE)[1:47,]
+```
+
+# DATA CLEAN
+### Rename columns
+```{r}
+names(steel) <- c('Country_areas','201810_prequantity','201810_prevalue',
+                                  '201809_prequantity','201809_prevalue',
+                                  '201809_finalquantity','201809_finalvalue',
+                                  '201710_finalquantity','201710_finalvalue',
+                                  '201709_finalquantity','201709_finalvalue')
+head(steel)
+```
+
+### Replace (-) with NA and convert to number,
+```{r}
+steel[steel=='(-)']<-NA
+steel[,2:11] = steel%>%
+      select(2:11)%>%
+      # mutate_all(funs(str_replace(., ",", "")))%>%  
+      mutate_all(as.numeric)
+head(steel)
+```
+
+###  Transform dataset 
+```{r}
+steel_final_1 = gather(steel,year_month_type, Number,2:11, factor_key = TRUE)%>%
+                separate(year_month_type, c('year_month','quant_value'),sep='_')%>%
+                spread(quant_value,'Number')
+head(steel_final_1,10)
+```
+
+```{r}
+steel_final_2 = gather(steel,year_month_type, Number,2:11, factor_key = TRUE)%>%
+                separate(year_month_type, c('year_month','quant_value'),sep='_')%>%
+                spread(year_month,'Number')
+head(steel_final_2,10)
+```
+
+
+# DATA ANALYSIS
+
+###Questions：
+#####1. Which country/area has the overall largest final quantity / value
+```{r}
+final_quantity = steel_final_2%>%
+  filter(quant_value =='finalquantity')%>%
+  rowwise()%>%
+  mutate(finalquantity_overall= sum(`201709`,`201710`,`201809`,`201810`,na.rm=TRUE))%>%
+  arrange(desc(finalquantity_overall))
+head(final_quantity)
+
+final_value = steel_final_2%>%
+  filter(quant_value =='finalvalue')%>%
+  rowwise()%>%
+  mutate(finalvalue_overall= sum(`201709`,`201710`,`201809`,`201810`,na.rm=TRUE))%>%
+  arrange(desc(finalvalue_overall))
+head(final_value)
+
+```
+Europe has the highest overall quantity. 
+```{r}
+final_quantity$Country_areas <- factor(final_quantity$Country_areas, levels = final_quantity$Country_areas[order(final_quantity$finalquantity_overall)])
+
+ g=ggplot(final_quantity,aes(y=finalquantity_overall,x=Country_areas,label=Country_areas))
+ g+geom_bar(stat='identity', aes(fill=finalquantity_overall), width=.5)+
+   coord_flip()
+```
+
+Europe has the highest overall value. 
+```{r}
+final_value$Country_areas <- factor(final_value$Country_areas, levels = final_value$Country_areas[order(final_value$finalvalue_overall)])
+
+ g=ggplot(final_value,aes(y=finalvalue_overall,x=Country_areas,label=Country_areas))
+ g+geom_bar(stat='identity', aes(fill=finalvalue_overall), width=.5)+
+   coord_flip()
+```
+
+
+#####2. Which country has the highest unit value (Value / Quantity) 
+Brazil has the hightest unit price while Singapore has the lowest unit price. 
+```{r}
+unit_value=data.frame(final_value$Country_areas,final_quantity$finalquantity_overall,final_value$finalvalue_overall)
+names(unit_value) = c('country','quantity','value')
+unit_value=unit_value%>%
+  mutate(unit_value = quantity /value )
+  
+unit_value$country <- factor(unit_value$country, levels = unit_value$country[order(unit_value$unit_value)])
+
+g1=ggplot(unit_value,aes(y=unit_value,x=country,label=country))
+ g1+geom_bar(stat='identity', aes(fill=unit_value), width=.5)+
+   coord_flip()
+```
+#####3. What does unit value distribution looks like?    
+The unit value distribution is a normal distribution with slightly left skewed.   
+The average unit value is 0.9373.
+
+```{r}
+ggplot(unit_value, aes(x=unit_value)) + 
+  geom_histogram(binwidth = 0.1, color="darkblue", fill="lightblue")+
+  geom_density(alpha=.2, fill="#FF6666") 
+```
+```{r}
+summary(unit_value)
+```
+
+#####What is the defferent between preliminary and final quantity  
+Most quantity difference falls in 0-100 bin. This is right skewed distribution. 
+```{r}
+diff  = steel_final_1%>%
+  mutate(quantity_diff = finalquantity - prequantity,
+         value_diff = finalvalue - prevalue)%>%
+  filter(!is.na(quantity_diff))
+
+ggplot(diff, aes(x=quantity_diff)) +
+  geom_histogram(binwidth = 100, color="darkblue", fill="lightblue")+
+  geom_density(alpha=.2, fill="#FF6666")
+```
+
