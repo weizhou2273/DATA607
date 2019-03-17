@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<books>
+    <book>
+        <category>Textbook</category>
+        <title>Practical Statistics for Data Scientists: 50 Essential Concepts</title>
+        <authors>Peter Bruce;Andrew Bruce</authors>
+        <isbn_13>978-1118834817</isbn_13>
+        <page_count>474</page_count>
+        <publisher>Wiley</publisher>
+        <edition>1</edition>
+    </book>
+    <book>
+        <category>Textbook</category>
+        <title>R for Data Science: Import, Tidy, Transform, Visualize, and Model Data</title>
+        <authors>Silge,Julia; Robinson,David</authors>
+        <isbn_13>978-1491981658</isbn_13>
+        <page_count>194</page_count>
+        <publisher>O'reilly Media</publisher>
+        <edition>1</edition>
+    </book>
+    <book>
+        <category>Textbook</category>
+        <title>R Cookbook: Proven Recipes for Data Analysis, Statistics, and Graphics (O'reilly Cookbooks)</title>
+        <authors>Wickham,Hadley; Grolemund,Garrett</authors>
+        <isbn_13>978-1491910399</isbn_13>
+        <page_count>522</page_count>
+        <publisher>O'reilly Media</publisher>
+        <edition>1</edition>
+    </book>
+</books>

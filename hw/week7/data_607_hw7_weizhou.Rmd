@@ -1,0 +1,37 @@
+---
+title: "Data607_hw7_weizhou"
+author: "Wei Zhou"
+date: "3/16/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(jsonlite)
+library(XML)
+library(dplyr)
+library(RCurl)
+library(rlist)
+```
+
+
+# Json Format
+```{r}
+book_json <- fromJSON('book.json', simplifyDataFrame = TRUE)
+book_json
+```
+
+# HTML Format
+```{r}
+book_html <- readHTMLTable('book.html')
+book_html
+```
+
+# XML Format
+
+```{r}
+book_xml <- xmlToDataFrame('book.xml')
+book_xml
+```
+
+The three dataframe are identical. 

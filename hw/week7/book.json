@@ -1,0 +1,31 @@
+{
+    "books":[
+        {
+            "category":"Textbook",
+            "title":"Practical Statistics for Data Scientists: 50 Essential Concepts",
+            "authors": "Peter Bruce;Andrew Bruce",
+            "isbn13":"978-1118834817",
+            "pageCount":"474",
+            "publisher":"Wiley",
+            "edition":"1"
+        },
+        {
+            "category":"Textbook",
+            "title":"R for Data Science: Import, Tidy, Transform, Visualize, and Model Data",
+            "authors": "Silge,Julia; Robinson,David",
+            "isbn13":"978-1491981658",
+            "pageCount":"194",
+            "publisher":"O'reilly Media",
+            "edition":"1"
+        },
+        {
+            "category":"Textbook",
+            "title":"R Cookbook: Proven Recipes for Data Analysis, Statistics, and Graphics (O'reilly Cookbooks)",
+            "authors": "Wickham,Hadley; Grolemund,Garrett",
+            "isbn13":"978-1491910399",
+            "pageCount":"522",
+            "publisher":"O'reilly Media",
+            "edition":"1"
+        }
+    ]
+}

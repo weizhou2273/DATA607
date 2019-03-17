@@ -1,0 +1,335 @@
+---
+title: "DATA607 Project 2: Data Tidying and Transformation"
+author: "Wei Zhou, Weijian Cai, Mia Chen"
+date: "March 10, 2019"
+output: html_document
+---
+
+*** 
+
+###**Goal of this project**: 
+
+####- Practice in preparing different datasets for downstream analysis work.
+
+Our task is to choose any three of the "wide" datasets identified in the Week 6 Discussion items.For each of the three chosen datasets:
+
+* Create a .CSV file (or optionally, a MySQL database!) that includes all of the information included in the dataset. You're encouraged to use a "wide" structure similar to how the information appears in the discussion item, so that you can practice tidying and transformations as described below.
+
+* Read the information from your .CSV file into R, and use tidyr and dplyr as needed to tidy and transform your data.
+
+* Perform the analysis requested in the discussion item.
+
+* The code is in an R Markdown file, posted to rpubs.com, which includes narrative descriptions of data cleanup work, analysis, and conclusions.
+
+***
+
+#Dataset 1: Steel Imports Data from U.S. Census
+
+Load the required library to tidy and modify data for further analysis
+```{r setup, message=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(lubridate)
+```
+
+### Read data from csv file , skip the first 15 rows
+```{r}
+steel <- read.csv('https://raw.githubusercontent.com/weizhou2273/DATA607/master/projects/project%202/steel_import_1.csv',skip=15, stringsAsFactors = F, header= FALSE)[1:47,]
+```
+
+## DATA CLEAN
+### Rename columns
+```{r}
+names(steel) <- c('Country_areas','201810_prequantity','201810_prevalue',
+                                  '201809_prequantity','201809_prevalue',
+                                  '201809_finalquantity','201809_finalvalue',
+                                  '201710_finalquantity','201710_finalvalue',
+                                  '201709_finalquantity','201709_finalvalue')
+head(steel)
+```
+
+### Replace (-) with NA and convert to number,
+```{r}
+steel[steel=='(-)']<-NA
+steel[,2:11] = steel%>%
+      select(2:11)%>%
+      # mutate_all(funs(str_replace(., ",", "")))%>%  
+      mutate_all(as.numeric)
+head(steel)
+```
+
+###  Transform dataset 
+```{r}
+steel_final_1 = gather(steel,year_month_type, Number,2:11, factor_key = TRUE)%>%
+                separate(year_month_type, c('year_month','quant_value'),sep='_')%>%
+                spread(quant_value,'Number')
+head(steel_final_1,10)
+```
+
+```{r}
+steel_final_2 = gather(steel,year_month_type, Number,2:11, factor_key = TRUE)%>%
+                separate(year_month_type, c('year_month','quant_value'),sep='_')%>%
+                spread(year_month,'Number')
+head(steel_final_2,10)
+```
+
+
+## DATA ANALYSIS
+
+###Questions:
+#####1. Which country/area has the overall largest final quantity / value
+```{r}
+final_quantity = steel_final_2%>%
+  filter(quant_value =='finalquantity')%>%
+  rowwise()%>%
+  mutate(finalquantity_overall= sum(`201709`,`201710`,`201809`,`201810`,na.rm=TRUE))%>%
+  arrange(desc(finalquantity_overall))
+head(final_quantity)
+
+final_value = steel_final_2%>%
+  filter(quant_value =='finalvalue')%>%
+  rowwise()%>%
+  mutate(finalvalue_overall= sum(`201709`,`201710`,`201809`,`201810`,na.rm=TRUE))%>%
+  arrange(desc(finalvalue_overall))
+head(final_value)
+
+```
+Europe has the highest overall quantity. 
+```{r}
+final_quantity$Country_areas <- factor(final_quantity$Country_areas, levels = final_quantity$Country_areas[order(final_quantity$finalquantity_overall)])
+
+ g=ggplot(final_quantity,aes(y=finalquantity_overall,x=Country_areas,label=Country_areas))
+ g+geom_bar(stat='identity', aes(fill=finalquantity_overall), width=.5)+
+   coord_flip()
+```
+
+Europe has the highest overall value. 
+```{r}
+final_value$Country_areas <- factor(final_value$Country_areas, levels = final_value$Country_areas[order(final_value$finalvalue_overall)])
+
+ g=ggplot(final_value,aes(y=finalvalue_overall,x=Country_areas,label=Country_areas))
+ g+geom_bar(stat='identity', aes(fill=finalvalue_overall), width=.5)+
+   coord_flip()
+```
+
+
+#####2. Which country has the highest unit value (Value / Quantity) 
+Brazil has the hightest unit price while Singapore has the lowest unit price. 
+```{r}
+unit_value=data.frame(final_value$Country_areas,final_quantity$finalquantity_overall,final_value$finalvalue_overall)
+names(unit_value) = c('country','quantity','value')
+unit_value=unit_value%>%
+  mutate(unit_value = quantity /value )
+  
+unit_value$country <- factor(unit_value$country, levels = unit_value$country[order(unit_value$unit_value)])
+
+g1=ggplot(unit_value,aes(y=unit_value,x=country,label=country))
+ g1+geom_bar(stat='identity', aes(fill=unit_value), width=.5)+
+   coord_flip()
+```
+#####3. What does unit value distribution looks like?    
+The unit value distribution is a normal distribution with slightly left skewed.   
+The average unit value is 0.9373.
+
+```{r}
+ggplot(unit_value, aes(x=unit_value)) + 
+  geom_histogram(binwidth = 0.1, color="darkblue", fill="lightblue")+
+  geom_density(alpha=.2, fill="#FF6666") 
+```
+```{r}
+summary(unit_value)
+```
+
+#####What is the defferent between preliminary and final quantity  
+Most quantity difference falls in 0-100 bin. This is right skewed distribution. 
+```{r}
+diff  = steel_final_1%>%
+  mutate(quantity_diff = finalquantity - prequantity,
+         value_diff = finalvalue - prevalue)%>%
+  filter(!is.na(quantity_diff))
+
+ggplot(diff, aes(x=quantity_diff)) +
+  geom_histogram(binwidth = 100, color="darkblue", fill="lightblue")+
+  geom_density(alpha=.2, fill="#FF6666")
+```
+
+***
+
+#Dataset 2: Zillow data on 2018 Median Rental Price/sqft by State by Sunny Mehta
+
+load csv dataset into R
+```{r}
+url <- "https://raw.githubusercontent.com/Weicaidata/607/master/State_MedianRentalPricePerSqft_AllHomes.csv"
+df1 <- read.csv(url,header=TRUE)
+head(df1)
+```
+
+rename the columns for better understanding the data
+```{r}
+colnames(df1) <- c("state","size","aJan","bFeb","cMar","dApr","eMay","fJun","gJul","hAug","iSep","jOct","kNov","lDec")
+head(df1)
+```
+
+use glimpse function in dplyr to examine the dataset, and use summary function to see if there is missing value
+```{r}
+glimpse(df1)
+summary(df1)
+
+```
+
+use gather function from tidyr to make the wide dataset into long, and sort by "size"
+```{r}
+df2 <- gather(df1,"month","sales",3:14) %>% 
+  arrange(size)
+head(df2)
+```
+
+
+##answer question "overall current distribution"
+we can use histgram to see that it is a right skewed distributed, and use summary function to find out the mean, min,max,1st quartille and 3rd quartille.
+```{r}
+hist(df2$sales,main="sales",xlab="Averge")
+summary(df2$sales)
+```
+
+##answer question "sales trend by months"
+use summarise funtion,grouped by"months" to find the average price for each months.
+```{r}
+df3 <- df2 %>% 
+  arrange(month) %>% 
+  group_by(month) %>% 
+  summarise(avg=mean(sales))
+df3
+```
+
+from the graph below, we can see that summer is hot season for sales of house, winter is the low season, which is within our expectation.
+```{r}
+ggplot(data=df3,aes(x=month,y=avg,group=1))+
+  geom_line()+
+  geom_point()+
+  xlab("Month")+
+  ylab("Total")+
+  labs(title="Sales trend by month")
+```
+
+
+##answer question" trend by states"
+we want to see top 5 largest state's sales over year.
+```{r}
+df6 <- df2 %>% 
+  filter(size<=5)
+head(df6)
+```
+
+NY has the hightst sales price per sqf compare to other states, buth the price for other states are more steady.
+```{r}
+ggplot(df6,aes(x=month,y=sales,color=state,group=state))+
+   geom_line() +
+  xlab('Month')+labs(title = "Top 5 states sales trend")
+```
+
+***
+
+#Dataset 3: Retail Volume & Avocado Price for 2018
+
+source: http://www.hassavocadoboard.com/retail/volume-and-price-data
+
+Read csv file into R
+```{r}
+avocado <- read.csv("https://raw.githubusercontent.com/miachen410/DATA607/master/avocado.csv")
+```
+
+Take a look at the first 6 rows of the dataset
+```{r}
+head(avocado)
+```
+
+Take a look at the last 6 rows of the dataset
+```{r}
+tail(avocado)
+```
+
+Let's look at the structure of the dataset
+```{r}
+str(avocado)
+```
+
+Let's look at the summary of the dataset
+```{r}
+summary(avocado)
+```
+
+##Data tidying and transformation
+
+### Gather columns(Part 1)
+- Columns X4046, X4225 X4770 should be gathered under the variable "ProductCode"
+- We will use the gather function in tidyr to turn the wide table into long table: Product Code and Volume show as key-value pairs
+```{r}
+avocado2 <- avocado %>% gather(ProductCode, Volume, -Date:-Total.Volume, -Total.Bags:-XLarge.Bags)
+# New column ProductCode, with values gather from X4046, X4225 X4770, excluding all other columns
+head(avocado2)
+```
+
+### Gather columns(Part 2)
+- Columns Small.Bags, Large.Bags, XLarge.Bages should be gathered under the variable "BagSize"
+- Again, we will use the gather function in tidyr
+```{r}
+avocado3 <- avocado2 %>% gather(BagSize, Bags, -Date:-Total.Bags, -ProductCode, -Volume)
+head(avocado3)
+```
+
+Now we look at the structure again
+```{r}
+str(avocado3)
+```
+
+Change the class of Date from "factor" to "Date" using lubridate package
+```{r}
+avocado3$Date <- ymd(avocado3$Date)
+class(avocado3$Date)
+```
+
+Change ProductCode and BagSize from character to factors
+```{r}
+avocado3 <- avocado3 %>% mutate_at(vars(ProductCode, BagSize), funs(as.factor))
+class(avocado3$ProductCode)
+class(avocado3$BagSize)
+```
+
+##Data Analysis
+
+Let's look at the distribution of avocado average price:
+- The average price is centered around 1.0 to 1.1
+```{r}
+hist(avocado3$AveragePrice)
+```
+
+Relationship between total volume and average price showing on a scatterplot:
+- There is a decreasing linear relationship: the more the cheaper
+```{r}
+plot(avocado3$Total.Volume, avocado3$AveragePrice)
+```
+
+Average Price changes throughout the year:
+- Higher price in January, September and December
+```{r}
+avocado3 %>% select(Date, AveragePrice) %>% plot()
+```
+
+Let's find out the price differences among the products:
+```{r}
+# For each month, summarize the sum of volume and mean of average price, arrange from high to low price
+avocado3 %>% group_by(Month = month(Date)) %>% summarize(TotalVolume = sum(Volume), AvgPrice = mean(AveragePrice)) %>% arrange(desc(AvgPrice))
+```
+
+```{r}
+# For each month, summarize the sum of volume and mean of average price, arrange from high to low quantity
+avocado3 %>% group_by(Month = month(Date)) %>% summarize(TotalVolume = sum(Volume), AvgPrice = mean(AveragePrice)) %>% arrange(desc(TotalVolume))
+
+```
+
+####Conclusion: 
+> * In 2018, December is the month in which avocado had the highest price and lowest volume.
+> * In 2018, May is the month in which avocado had the lowest price and second highest volume.
