@@ -23,6 +23,7 @@ results <- resp$result
 ```
 
 ```{r}
+
 kable(results, "html") %>% 
   kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"), font_size = 8) %>% 
   scroll_box(width = "900px", height = "500px")
