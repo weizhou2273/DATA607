@@ -1,0 +1,30 @@
+---
+title: "data607_hw9_weizhou"
+author: "Wei Zhou"
+date: "3/31/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(jsonlite)
+library(readr)
+library(dplyr)
+library(knitr)
+library(kableExtra)
+```
+
+```{r}
+apiKey <- read_lines("./nytime_api_key.txt")
+base_url = 'https://api.nytimes.com/svc/movies/v2/reviews/search.json?query=godfather&api-key='
+url <- paste0(base_url,apiKey)
+resp <- fromJSON(url, flatten = TRUE)
+results <- resp$result
+```
+
+```{r}
+kable(results, "html") %>% 
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"), font_size = 8) %>% 
+  scroll_box(width = "900px", height = "500px")
+```
+
