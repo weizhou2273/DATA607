@@ -15,6 +15,7 @@ library(kableExtra)
 ```
 
 ```{r}
+
 apiKey <- read_lines("./nytime_api_key.txt")
 base_url = 'https://api.nytimes.com/svc/movies/v2/reviews/search.json?query=godfather&api-key='
 url <- paste0(base_url,apiKey)
