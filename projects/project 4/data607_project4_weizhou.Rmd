@@ -1,0 +1,183 @@
+---
+title: "Data607_project4_weizhou"
+author: "Wei Zhou"
+date: "4/14/2019"
+output: html_document
+---
+
+###Loading Library
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tm)
+library(dplyr)
+library(ggplot2)
+library(SnowballC)
+library(knitr)
+library(stringr)
+library(DT)
+library("rpart")
+library("rpart.plot")
+library("caTools")
+library("randomForest")
+library(pROC)
+library(caret)
+library(ROCR)
+```
+
+
+
+###Get file names
+```{r}
+ham_dir <- "./easy_ham/"
+spam_dir <- "./spam_2/"
+
+ham_file_ls= list.files(ham_dir)
+spam_file_ls= list.files(spam_dir)
+
+## Remove cmds files
+ham_file_ls = ham_file_ls[which(ham_file_ls!='cmds')]
+spam_file_ls = spam_file_ls[which(spam_file_ls!='cmds')]
+```
+
+#### Sample Ham file names
+
+```{r}
+head(ham_file_ls)
+```
+
+
+#### Sample spam file names
+```{r}
+head(spam_file_ls)
+```
+
+#### Total `r length(ham_file_ls)` ham files.     
+#### Total `r length(spam_file_ls)` spam files.
+
+
+
+## Read File content 
+
+###Define Text extraction function
+```{r} 
+extractText=function(path){
+### Set connection
+con = file(path, open="rt", encoding="latin1")
+### Readlines
+text = readLines(con,, encoding = "UTF-8")
+### Concatenate strings
+msg = text[seq(which(text=="")[1]+1,length(text),1)]
+### Close connection
+close(con)
+return(paste(msg, collapse="\n"))
+}
+```
+
+### Extract content
+```{r}
+ham_all = sapply(ham_file_ls, function(p) extractText(paste(ham_dir,p,sep="")))
+spam_all = sapply(spam_file_ls, function(p) extractText(paste(spam_dir,p,sep="")))
+```
+
+### Create Dataframe
+```{r}
+### Create Spam Label
+spam_label=append(rep(0,length(ham_file_ls)),
+      rep(1,length(spam_file_ls)))
+
+### Merge Ham and Spam content as one list
+content = append(ham_all,spam_all)
+
+### Combine Spam Lable list with content list 
+all_df =data.frame(spam_label,content)
+
+### Reset index 
+rownames(all_df)= NULL
+
+head(all_df)
+```
+
+### Clean Content
+```{r}
+content_corp = VCorpus(VectorSource(all_df$content))
+toSpace <- content_transformer(function (x , pattern ) gsub(pattern, " ", x))
+
+content_corp = content_corp %>%
+                tm_map(removePunctuation)%>%
+                  tm_map(stripWhitespace)%>%
+                  tm_map(content_transformer(tolower))%>%
+                  tm_map(removeWords, stopwords("english"))
+                  
+```
+
+
+### Create Term-Document Matrics
+```{r}
+dtm<-DocumentTermMatrix(content_corp)
+dtm
+
+```
+
+### Remove sparse terms
+###### To obtain a more reasonable number of terms, we need to limit dtm to contain terms present in let's ay 5% of the documents.
+
+```{r}
+sparse = 0.05
+freq_dtm = removeSparseTerms(dtm, 1-sparse)
+freq_dtm
+```
+
+### Merge frequently presented corps dataframe to all_df
+```{r}
+freq_dtm_df = as.data.frame(as.matrix(freq_dtm))
+```
+
+### Assign 
+```{r}
+freq_dtm_df$spam_label = as.factor(all_df$spam_label)
+head(freq_dtm_df)
+
+```
+
+### Prepare Training and Testing dataset
+
+```{r}
+set.seed(123)
+
+df = freq_dtm_df%>%
+      select(-c("100","2002","else","next"))
+spl = sample.split(df$spam, 0.7)
+train = subset(df, spl == TRUE)
+test = subset(df, spl == FALSE)
+```
+
+### Check Split proportion
+```{r}
+prop.table(table(train$spam_label))
+```
+
+```{r}
+prop.table(table(test$spam_label))
+```
+
+### Training the random forest model
+```{r}
+spamRF = randomForest(spam_label~., data=train)
+summary(spamRF)
+```
+
+
+### Make the prediction using Random Forest Model. 
+```{r}
+target = test$spam_label
+
+result.predicted.prob <- predict(spamRF, test, type="prob") # Prediction
+
+result.roc <- roc(test$spam_label, result.predicted.prob[,2]) # Draw ROC curve.
+plot(result.roc, print.thres="best", print.thres.best.method="closest.topleft")
+
+result.coords <- coords(result.roc, "best", best.method="closest.topleft", ret=c("threshold", "accuracy"))
+print(result.coords)
+
+```
+
